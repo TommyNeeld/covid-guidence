@@ -1,0 +1,35 @@
+version: "3.7"
+services:
+  rabbit:
+    image: rabbitmq:latest
+  
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: covid_api:latest
+    ports:
+      - 8000:8000
+    entrypoint: uvicorn main:app --host 0.0.0.0 --port 8000
+    environment:
+      ENV_NAME: local_docker
+
+  worker:
+    image: covid_api:latest
+    entrypoint: celery worker --app=worker.celery_app -c 2 --loglevel=info
+    environment:
+      ENV_NAME: local_docker
+    depends_on:
+      - fastapi
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data_container:/data/db
+    depends_on:
+      - fastapi
+
+volumes:
+  mongodb_data_container:
